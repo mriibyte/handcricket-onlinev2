@@ -1,0 +1,22 @@
+# Render.com blueprint — deploy with "New → Blueprint" in Render.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: hand-cricket-arena
+    runtime: node
+    plan: free
+    region: singapore # change to oregon / frankfurt / ohio if you're closer
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    # better-sqlite3 compiles a native module, so pin a Node version with a
+    # ready-made toolchain on Render's native runtime.
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.1
+      - key: NODE_ENV
+        value: production
+# NOTE: Render's free plan doesn't support persistent disks — the SQLite file
+# (data/arena.db) lives on an ephemeral filesystem and resets on each deploy.
+# On a paid plan, add a disk mounted at /opt/render/project/src/data to keep
+# accounts and match history between deploys.

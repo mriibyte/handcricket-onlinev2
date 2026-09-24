@@ -1,0 +1,24 @@
+{
+  "name": "hand-cricket-arena",
+  "version": "2.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Hand Cricket Arena — online multiplayer + singleplayer vs bot, with accounts and stats",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js",
+    "dev:server": "node server.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "vite": "^5.4.11"
+  }
+}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Hand Cricket Online</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- HOME: create or join -->
+    <section id="screen-home" class="screen">
+      <h1>🏏 Hand Cricket <span class="accent">Online</span></h1>
+      <p class="subtitle">Play hand cricket with a friend, anywhere — just share a room code.</p>
+
+      <div class="card">
+        <h2>Create a room</h2>
+        <label>Your name</label>
+        <input id="create-name" maxlength="20" placeholder="e.g. Rohan" />
+        <div class="row">
+          <div class="field">
+            <label>Overs</label>
+            <input id="create-overs" type="number" min="1" max="20" value="2" />
+          </div>
+          <div class="field">
+            <label>Wickets</label>
+            <input id="create-wickets" type="number" min="1" max="10" value="2" />
+          </div>
+        </div>
+        <button class="btn primary" id="btn-create">Create Room</button>
+      </div>
+
+      <div class="divider">or</div>
+
+      <div class="card">
+        <h2>Join a room</h2>
+        <label>Your name</label>
+        <input id="join-name" maxlength="20" placeholder="e.g. Priya" />
+        <label>Room code</label>
+        <input id="join-code" maxlength="5" placeholder="ABCDE" style="text-transform:uppercase" />
+        <button class="btn primary" id="btn-join">Join Room</button>
+      </div>
+
+      <p id="home-error" class="error"></p>
+    </section>
+
+    <!-- LOBBY: waiting for opponent / share code -->
+    <section id="screen-lobby" class="screen hidden">
+      <h2>Room Code</h2>
+      <div class="room-code" id="lobby-code">-----</div>
+      <p class="subtitle">Share this code with your friend to join.</p>
+      <div class="spinner"></div>
+      <p id="lobby-status">Waiting for opponent to join…</p>
+    </section>
+
+    <!-- MATCH: everything after both players are in -->
+    <section id="screen-match" class="screen hidden">
+
+      <!-- compact top bar -->
+      <div class="topbar">
+        <div class="score-pill">
+          <span id="tb-runs">0</span>/<span id="tb-wkts">0</span>
+          <span class="dim">(<span id="tb-balls">0</span>/<span id="tb-maxballs">0</span>)</span>
+        </div>
+        <div class="target-pill hidden" id="tb-target-wrap">
+          Target <span id="tb-target">-</span>
+        </div>
+        <div class="names-pill">
+          <span id="tb-you">You</span> vs <span id="tb-opp">Opponent</span>
+        </div>
+      </div>
+
+      <div id="stage" class="stage">
+        <!-- dynamic phase content injected here -->
+      </div>
+
+      <details id="log-wrap" class="log-wrap">
+        <summary>Match log</summary>
+        <div id="log" class="log"></div>
+      </details>
+
+    </section>
+  </div>
+
+  <!-- POPUP MODAL: wickets / target reached / all out -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div id="modal-icon" class="modal-icon">🏏</div>
+      <div id="modal-title" class="modal-title">Wicket!</div>
+      <div id="modal-body" class="modal-body"></div>
+      <button class="btn primary" id="modal-close">Continue</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
