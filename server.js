@@ -40,6 +40,9 @@ app.get("/api/me", (req, res) => {
   res.json({ ok: true, user, stats: db.getStats(user.id) });
 });
 
+// tiny health endpoint for keep-alive pings and uptime monitors
+app.get("/api/health", (req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
 app.get("/api/matches", (req, res) => {
   const user = db.userForToken(req.headers.authorization?.replace(/^Bearer\s+/i, ""));
   if (!user) return res.status(401).json({ ok: false, error: "Not signed in." });
@@ -657,3 +660,18 @@ app.get("*", (req, res, next) => {
 
 const PORT = parseInt(process.env.PORT, 10) || 3000; // PORT="0" or empty must fall back to 3000
 server.listen(PORT, () => console.log(`Hand Cricket Arena listening on port ${PORT}`));
+
+// ------------------------------------------------------------ keep-alive
+// Render's free tier sleeps after ~15 min without traffic, which makes the
+// first player after a break wait ~30s. Ping ourselves every 10 min to stay
+// awake. Uses RENDER_EXTERNAL_URL (set automatically by Render); set SELF_URL
+// manually for any other host. Opt out with NO_KEEP_ALIVE=1.
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL;
+if (SELF_URL && !process.env.NO_KEEP_ALIVE) {
+  setInterval(() => {
+    fetch(`${SELF_URL}/api/health`)
+      .then((r) => console.log(`[keep-alive] ${r.status}`))
+      .catch((e) => console.log(`[keep-alive] failed: ${e.message}`));
+  }, 10 * 60 * 1000);
+  console.log(`[keep-alive] pinging ${SELF_URL} every 10 min`);
+}
