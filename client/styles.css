@@ -889,6 +889,7 @@ button, input { font-family: inherit; }
 .reveal-verdict { font-family: var(--font-pixel); font-size: 15px; line-height: 2; }
 .modal-title { font-family: var(--font-pixel); font-size: 12px; line-height: 1.8; }
 .modal-body { font-family: var(--font-mono); font-size: 11px; }
+.confetti-layer { display: none; }
 .voice-error { color: var(--bad); font-family: var(--font-mono); font-size: 9px; max-width: 150px; line-height: 1.4; }
 .ptt { touch-action: none; }
 .ptt.is-live { color: var(--bad); border-color: var(--bad); background: rgba(255,105,95,.1); }
