@@ -1,4 +1,5 @@
 const TOKEN_KEY = "hc_arena_token";
+const API_ORIGIN = import.meta.env.VITE_SERVER_URL || "";
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -10,7 +11,7 @@ export function setToken(token) {
 }
 
 export async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch("/api" + path, {
+  const res = await fetch(API_ORIGIN + "/api" + path, {
     method,
     headers: {
       "Content-Type": "application/json",

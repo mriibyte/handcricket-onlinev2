@@ -1,0 +1,8 @@
+{
+  "appId": "com.mriibyte.handcricketarena",
+  "appName": "Hand Cricket Arena",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

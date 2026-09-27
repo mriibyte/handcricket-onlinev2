@@ -98,7 +98,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
   const oppName = state.opponent ? state.opponent.name : "Opponent";
 
   const emit = (event, data) => socket.emit(event, data);
-  const voice = useVoice(socket, !state.vsBot); // push-to-talk, multiplayer only
+  const voice = useVoice(socket, !state.vsBot, state); // push-to-talk, multiplayer only
 
   // one-shot event processing: reveal overlay + timeline feed + wicket modal
   useEffect(() => {
@@ -405,18 +405,22 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
                   {voice.talking ? "YOU" : oppName.toUpperCase()}
                 </span>
               )}
-              <button
-                className={`icon-btn ptt ${voice.talking ? "is-live" : ""}`}
-                title={voice.talking ? "Release to mute" : "Hold to talk"}
-                onMouseDown={voice.requestTalk}
-                onMouseUp={voice.releaseTalk}
-                onMouseLeave={voice.talking ? voice.releaseTalk : undefined}
-                onTouchStart={voice.requestTalk}
-                onTouchEnd={voice.releaseTalk}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                {voice.talking ? <IconMic /> : <IconMicOff />}
-              </button>
+               <button
+                 className={`icon-btn ptt ${voice.talking ? "is-live" : ""}`}
+                 title={voice.talking ? "Release to mute" : "Hold to talk"}
+                 aria-label={voice.talking ? "Release microphone" : "Hold to talk"}
+                 onPointerDown={(event) => {
+                   event.currentTarget.setPointerCapture?.(event.pointerId);
+                   voice.requestTalk();
+                 }}
+                 onPointerUp={voice.releaseTalk}
+                 onPointerCancel={voice.releaseTalk}
+                 onPointerLeave={voice.talking ? voice.releaseTalk : undefined}
+                 onContextMenu={(e) => e.preventDefault()}
+               >
+                 {voice.talking ? <IconMic /> : <IconMicOff />}
+               </button>
+               {voice.error && <span className="voice-error" role="status">{voice.error}</span>}
             </>
           )}
           <span className="chip mono">{state.vsBot ? `SOLO` : state.code}</span>
@@ -427,6 +431,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
       <Timeline balls={balls} />
 
       <div className="stage card">{stage}</div>
+      <audio ref={voice.remoteAudioRef} autoPlay playsInline aria-hidden="true" />
 
       {reveal && (
         <div className="reveal-veil">

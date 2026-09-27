@@ -11,7 +11,23 @@ const bot = require("./bot");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: { origin: true, methods: ["GET", "POST"], credentials: true },
+});
+
+// The Android build runs the client from capacitor://localhost while the
+// game/API remain on Render. Keep the API usable from that packaged origin.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "dist")));
@@ -42,6 +58,23 @@ app.get("/api/me", (req, res) => {
 
 // tiny health endpoint for keep-alive pings and uptime monitors
 app.get("/api/health", (req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
+// Voice config is intentionally public and contains no secrets by default.
+// A TURN provider can be supplied later through environment variables without
+// baking credentials into the web or Android client.
+app.get("/api/voice-config", (req, res) => {
+  const iceServers = [
+    { urls: ["stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"] },
+  ];
+  if (process.env.TURN_URL && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+    iceServers.push({
+      urls: process.env.TURN_URL,
+      username: process.env.TURN_USERNAME,
+      credential: process.env.TURN_CREDENTIAL,
+    });
+  }
+  res.json({ iceServers });
+});
 
 app.get("/api/matches", (req, res) => {
   const user = db.userForToken(req.headers.authorization?.replace(/^Bearer\s+/i, ""));

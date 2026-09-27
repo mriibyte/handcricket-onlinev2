@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hand Cricket Arena</string>
+    <string name="title_activity_main">Hand Cricket Arena</string>
+    <string name="package_name">com.mriibyte.handcricketarena</string>
+    <string name="custom_url_scheme">com.mriibyte.handcricketarena</string>
+</resources>
