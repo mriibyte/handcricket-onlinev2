@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Modal, Confetti, Spinner } from "./ui.jsx";
-import { IconBack, IconBat, IconTrophy, IconMic, IconMicOff } from "./icons.jsx";
+import { IconBack, IconBat, IconTrophy, IconMic, IconMicOff, IconSettings } from "./icons.jsx";
 import useVoice from "../useVoice.js";
 import { useSettings } from "../settings.js";
+import SettingsPanel from "./SettingsPanel.jsx";
 
 const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
 
@@ -92,6 +93,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
   const [modal, setModal] = useState(null);
   const [confetti, setConfetti] = useState(false);
   const [localPick, setLocalPick] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [, force] = useState(0);
   const [settings] = useSettings();
 
@@ -411,7 +413,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
           <span className={`n-opp ${cur && cur.battingSide === "opponent" ? "is-live" : ""}`}>{oppName}</span>
         </div>
         <div className="match-top-right">
-          {!state.vsBot && settings.voiceEnabled && (
+           {!state.vsBot && settings.voiceEnabled && (
             <>
               {(voice.talking || voice.peerTalking) && (
                 <span className={`talk-pill ${voice.talking ? "mine" : ""}`}>
@@ -433,9 +435,12 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
                  {voice.talking ? <IconMic /> : <IconMicOff />}
                </button>
                {voice.error && <span className="voice-error" role="status">{voice.error}</span>}
-            </>
-          )}
-          <span className="chip mono">{state.vsBot ? `SOLO` : state.code}</span>
+             </>
+           )}
+          <button className="icon-btn ghosty" onClick={() => setShowSettings(true)} title="Settings" aria-label="Settings">
+            <IconSettings />
+          </button>
+           <span className="chip mono">{state.vsBot ? `SOLO` : state.code}</span>
         </div>
       </header>
 
@@ -444,6 +449,8 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
 
       <div className="stage card">{stage}</div>
       <audio ref={voice.remoteAudioRef} autoPlay playsInline muted={settings.muteOpponent} aria-hidden="true" />
+
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       {reveal && (
         <div className="reveal-veil">
