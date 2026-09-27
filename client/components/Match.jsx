@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Modal, Confetti, Spinner } from "./ui.jsx";
 import { IconBack, IconBat, IconTrophy, IconMic, IconMicOff } from "./icons.jsx";
 import useVoice from "../useVoice.js";
+import { useSettings } from "../settings.js";
 
 const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
 
@@ -92,13 +93,26 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
   const [confetti, setConfetti] = useState(false);
   const [localPick, setLocalPick] = useState(null);
   const [, force] = useState(0);
+  const [settings] = useSettings();
 
   const processed = useRef(0);
   const feed = useRef({ innings: null, balls: [] });
   const oppName = state.opponent ? state.opponent.name : "Opponent";
 
   const emit = (event, data) => socket.emit(event, data);
-  const voice = useVoice(socket, !state.vsBot, state); // push-to-talk, multiplayer only
+  const voice = useVoice(socket, !state.vsBot && settings.voiceEnabled, state);
+  const persistentMic = settings.voiceMode === "persistent";
+
+  const handleVoicePress = (event) => {
+    if (persistentMic) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    voice.requestTalk();
+  };
+
+  const togglePersistentMic = () => {
+    if (voice.talking) voice.releaseTalk();
+    else voice.requestTalk();
+  };
 
   // one-shot event processing: reveal overlay + timeline feed + wicket modal
   useEffect(() => {
@@ -397,7 +411,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
           <span className={`n-opp ${cur && cur.battingSide === "opponent" ? "is-live" : ""}`}>{oppName}</span>
         </div>
         <div className="match-top-right">
-          {!state.vsBot && (
+          {!state.vsBot && settings.voiceEnabled && (
             <>
               {(voice.talking || voice.peerTalking) && (
                 <span className={`talk-pill ${voice.talking ? "mine" : ""}`}>
@@ -407,15 +421,13 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
               )}
                <button
                  className={`icon-btn ptt ${voice.talking ? "is-live" : ""}`}
-                 title={voice.talking ? "Release to mute" : "Hold to talk"}
-                 aria-label={voice.talking ? "Release microphone" : "Hold to talk"}
-                 onPointerDown={(event) => {
-                   event.currentTarget.setPointerCapture?.(event.pointerId);
-                   voice.requestTalk();
-                 }}
-                 onPointerUp={voice.releaseTalk}
-                 onPointerCancel={voice.releaseTalk}
-                 onPointerLeave={voice.talking ? voice.releaseTalk : undefined}
+                 title={persistentMic ? (voice.talking ? "Mute microphone" : "Turn microphone on") : (voice.talking ? "Release to mute" : "Hold to talk")}
+                 aria-label={persistentMic ? (voice.talking ? "Mute microphone" : "Turn microphone on") : (voice.talking ? "Release microphone" : "Hold to talk")}
+                 onPointerDown={persistentMic ? undefined : handleVoicePress}
+                 onPointerUp={persistentMic ? undefined : voice.releaseTalk}
+                 onPointerCancel={persistentMic ? undefined : voice.releaseTalk}
+                 onPointerLeave={!persistentMic && voice.talking ? voice.releaseTalk : undefined}
+                 onClick={persistentMic ? togglePersistentMic : undefined}
                  onContextMenu={(e) => e.preventDefault()}
                >
                  {voice.talking ? <IconMic /> : <IconMicOff />}
@@ -431,7 +443,7 @@ export default function Match({ state, onLeave, onStatsRefresh, socket, user }) 
       <Timeline balls={balls} />
 
       <div className="stage card">{stage}</div>
-      <audio ref={voice.remoteAudioRef} autoPlay playsInline aria-hidden="true" />
+      <audio ref={voice.remoteAudioRef} autoPlay playsInline muted={settings.muteOpponent} aria-hidden="true" />
 
       {reveal && (
         <div className="reveal-veil">

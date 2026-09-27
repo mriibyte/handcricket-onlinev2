@@ -8,6 +8,8 @@ import Lobby from "./components/Lobby.jsx";
 import Match from "./components/Match.jsx";
 import HistoryPage from "./components/HistoryPage.jsx";
 import { Logo } from "./components/Logo.jsx";
+import { playUiSound } from "./sound.js";
+import { useSettings } from "./settings.js";
 
 export default function App() {
   const [user, setUser] = useState(null); // { id, username, name } | { name: 'Guest' }
@@ -16,9 +18,25 @@ export default function App() {
   const [roomCode, setRoomCode] = useState(null);
   const [matchState, setMatchState] = useState(null);
   const [booted, setBooted] = useState(false);
+  const [settings] = useSettings();
 
   const statsRef = useRef(stats);
   statsRef.current = stats;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("reduced-motion", settings.reducedMotion);
+  }, [settings.reducedMotion]);
+
+  // One quiet interaction tone for navigation and controls. The setting is
+  // read at event time, so toggling sounds takes effect immediately.
+  useEffect(() => {
+    const onClick = (event) => {
+      const control = event.target.closest?.("button, a");
+      if (control && !control.disabled) playUiSound(control.dataset.sound || "tap");
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
 
   const refreshStats = useCallback(async () => {
     if (!getToken()) return;

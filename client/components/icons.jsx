@@ -103,6 +103,13 @@ export const IconMicOff = ({ size = 18 }) => (
   </svg>
 );
 
+export const IconSettings = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={S} aria-hidden>
+    <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" stroke="currentColor" strokeWidth="1.7" />
+    <path d="m19 13.2 1.2 1-.1 1.8-1.6.8-.4 1.1.6 1.6-1.3 1.3-1.6-.6-1.1.4-.8 1.6-1.8.1-1-1.2-1.2-.3-1.5.7-1.4-1.2.5-1.7-.5-1.1-1.7-.6-.1-1.8 1.5-.9.3-1.2-.7-1.5 1.3-1.3 1.7.5 1.1-.5.6-1.6 1.8-.1.9 1.5 1.2.3 1.5-.7 1.3 1.3-.5 1.6.4 1.2 1.6.7.1 1.8Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+  </svg>
+);
+
 export const IconFlame = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={S} aria-hidden>
     <path
