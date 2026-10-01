@@ -5,7 +5,7 @@ import { Stepper, Segmented } from "./ui.jsx";
 import { IconBack, IconBot, IconUsers, IconCoin } from "./icons.jsx";
 
 export default function MenuPage({ user, stats, onBack }) {
-  const [mode, setMode] = useState(null); // 'bot' | 'create' | 'join'
+  const [mode, setMode] = useState(null); // 'bot' | 'create' | 'join' | 'team'
   const [name, setName] = useState(user?.name || "");
   const [difficulty, setDifficulty] = useState("medium");
   const [overs, setOvers] = useState(2);
@@ -35,6 +35,15 @@ export default function MenuPage({ user, stats, onBack }) {
     socket.emit("create_room", { name: displayName(), overs, wickets, token: getToken() }, (res) => {
       setBusy(false);
       if (!res.ok) setError(res.error || "Could not create the room.");
+    });
+  };
+
+  const createTeamRoom = () => {
+    setError("");
+    setBusy(true);
+    socket.emit("create_room", { mode: "team", name: displayName(), overs, wickets: Math.min(wickets, 5), maxTeamSize: 5, token: getToken() }, (res) => {
+      setBusy(false);
+      if (!res.ok) setError(res.error || "Could not create the team room.");
     });
   };
 
@@ -73,6 +82,14 @@ export default function MenuPage({ user, stats, onBack }) {
           <span className="mode-body">
             <span className="mode-title">Create a room</span>
             <span className="mode-desc">Multiplayer · share the code with a friend</span>
+          </span>
+        </button>
+
+        <button className={`mode-card ${mode === "team" ? "is-active" : ""}`} onClick={() => setMode(mode === "team" ? null : "team")}>
+          <span className="mode-icon gold"><IconUsers /></span>
+          <span className="mode-body">
+            <span className="mode-title">Team room</span>
+            <span className="mode-desc">Up to 5 players per side · rotate batters and bowlers</span>
           </span>
         </button>
 
@@ -127,6 +144,18 @@ export default function MenuPage({ user, stats, onBack }) {
               <button className="btn btn-primary btn-block" onClick={createRoom} disabled={busy}>
                 Create room
               </button>
+            </>
+          )}
+
+          {mode === "team" && (
+            <>
+              <div className="config-title">Build a team room</div>
+              <p className="stage-sub">Invite friends from the lobby, or share the room code. Team play requires an account.</p>
+              <div className="row">
+                <Stepper label="Overs" value={overs} onChange={setOvers} min={1} max={20} />
+                <Stepper label="Wickets" value={wickets} onChange={setWickets} min={1} max={5} />
+              </div>
+              <button className="btn btn-primary btn-block" onClick={createTeamRoom} disabled={busy}>Create team room</button>
             </>
           )}
 

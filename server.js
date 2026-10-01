@@ -8,6 +8,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const db = require("./db");
 const bot = require("./bot");
+const teamGame = require("./teamGame");
 
 const app = express();
 const server = http.createServer(app);
@@ -80,6 +81,102 @@ app.get("/api/matches", (req, res) => {
   const user = db.userForToken(req.headers.authorization?.replace(/^Bearer\s+/i, ""));
   if (!user) return res.status(401).json({ ok: false, error: "Not signed in." });
   res.json({ ok: true, matches: db.getMatches(user.id, parseInt(req.query.limit) || 25) });
+});
+
+function authUser(req, res) {
+  const user = db.userForToken(req.headers.authorization?.replace(/^Bearer\s+/i, ""));
+  if (!user) {
+    res.status(401).json({ ok: false, error: "Not signed in." });
+    return null;
+  }
+  return user;
+}
+
+app.get("/api/users/search", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  res.json({ ok: true, users: db.searchUsers(user.id, req.query.q) });
+});
+
+app.get("/api/friends", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  res.json({ ok: true, friends: db.getFriends(user.id) });
+});
+
+app.post("/api/friends/requests", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const targetId = req.body?.userId || (req.body?.username ? db.searchUsers(user.id, req.body.username).find((x) => x.username === String(req.body.username).toLowerCase())?.id : null);
+  const result = db.sendFriendRequest(user.id, targetId);
+  if (!result.ok) return res.status(400).json(result);
+  io.to(`user:${targetId}`).emit("friend_request_received", { from: user });
+  res.json(result);
+});
+
+app.post("/api/friends/requests/:id/accept", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const result = db.respondFriendRequest(user.id, req.params.id, true);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post("/api/friends/requests/:id/decline", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const result = db.respondFriendRequest(user.id, req.params.id, false);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.delete("/api/friends/:userId", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  res.json(db.removeFriend(user.id, req.params.userId));
+});
+
+app.get("/api/challenges", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  res.json({ ok: true, challenges: db.getChallenges(user.id) });
+});
+
+app.post("/api/challenges", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const result = db.createChallenge({
+    challengerId: user.id,
+    challengedId: req.body?.friendId,
+    roomCode: req.body?.roomCode,
+    teamId: req.body?.teamId || "B",
+    settings: req.body?.settings || {},
+  });
+  if (!result.ok) return res.status(400).json(result);
+  io.to(`user:${req.body.friendId}`).emit("challenge_received", { id: result.id, roomCode: req.body.roomCode, teamId: req.body.teamId || "B", from: user });
+  res.json(result);
+});
+
+app.post("/api/challenges/:id/accept", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const result = db.respondChallenge(user.id, req.params.id, true);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post("/api/challenges/:id/decline", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  const result = db.respondChallenge(user.id, req.params.id, false);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.delete("/api/challenges/:id", (req, res) => {
+  const user = authUser(req, res);
+  if (!user) return;
+  res.json(db.cancelChallenge(user.id, req.params.id));
 });
 
 // ---------------------------------------------------------------- game rooms
@@ -444,6 +541,10 @@ function computeResult(room) {
 }
 
 function broadcast(room) {
+  if (teamGame.isTeamRoom(room)) {
+    teamGame.sendState(room, io);
+    return;
+  }
   ["p1", "p2"].forEach((role) => {
     const player = room.players[role];
     if (player && player.connected && player.id !== "BOT") {
@@ -458,21 +559,39 @@ io.on("connection", (socket) => {
 
   socket.on("hello", ({ token } = {}) => {
     const user = db.userForToken(token);
+    if (socket.data.user?.id) socket.leave(`user:${socket.data.user.id}`);
     if (user) {
       socket.data.user = user;
+      socket.join(`user:${user.id}`);
       socket.emit("session", { ok: true, user, stats: db.getStats(user.id) });
     } else {
       socket.emit("session", { ok: false });
     }
   });
 
-  socket.on("create_room", ({ name, overs, wickets, token, difficulty } = {}, cb) => {
+  socket.on("create_room", ({ name, overs, wickets, token, difficulty, mode, maxTeamSize, invitedUserIds } = {}, cb) => {
     const user = token ? db.userForToken(token) : null;
     overs = Math.max(1, Math.min(20, parseInt(overs) || 2));
     wickets = Math.max(1, Math.min(10, parseInt(wickets) || 2));
     const botDiff = ["easy", "medium", "hard"].includes(difficulty) ? difficulty : null;
     const displayName = user ? user.name : String(name || "Player 1").slice(0, 20);
     const code = makeCode();
+    if (mode === "team") {
+      if (!user) return cb && cb({ ok: false, error: "Sign in to create a team room." });
+      const room = teamGame.createRoom({ code, socketId: socket.id, user, name: displayName, overs, wickets, maxTeamSize });
+      room.onChange = () => teamGame.sendState(room, io);
+      rooms.set(code, room);
+      socket.join(code);
+      socket.data.room = code;
+      socket.data.teamPlayerId = room.hostPlayerId;
+      cb && cb({ ok: true, code, mode: "team" });
+      teamGame.sendState(room, io);
+      for (const invitedUserId of Array.isArray(invitedUserIds) ? invitedUserIds : []) {
+        const challenge = db.createChallenge({ challengerId: user.id, challengedId: invitedUserId, roomCode: code, teamId: "B", settings: { overs, wickets, maxTeamSize } });
+        if (challenge.ok) io.to(`user:${invitedUserId}`).emit("challenge_received", { id: challenge.id, roomCode: code, teamId: "B", from: user });
+      }
+      return;
+    }
     const room = newRoom(code, socket.id, displayName, overs, wickets, botDiff);
     if (user) room.players.p1.userId = user.id;
     rooms.set(code, room);
@@ -483,10 +602,22 @@ io.on("connection", (socket) => {
     broadcast(room);
   });
 
-  socket.on("join_room", ({ name, code } = {}, cb) => {
+  socket.on("join_room", ({ name, code, teamId } = {}, cb) => {
     code = String(code || "").toUpperCase().trim();
     const room = rooms.get(code);
     if (!room) return cb && cb({ ok: false, error: "Room not found." });
+    if (teamGame.isTeamRoom(room)) {
+      const user = socket.data.user;
+      if (!user) return cb && cb({ ok: false, error: "Sign in to join a team room." });
+      const result = teamGame.addPlayer(room, { socketId: socket.id, user, name: user.name || name, teamId });
+      if (!result.ok) return cb && cb(result);
+      socket.join(code);
+      socket.data.room = code;
+      socket.data.teamPlayerId = result.player.playerId;
+      cb && cb({ ok: true, code, mode: "team", playerId: result.player.playerId });
+      teamGame.sendState(room, io);
+      return;
+    }
     if (room.vsBot) return cb && cb({ ok: false, error: "That room is singleplayer." });
     if (room.players.p2 && room.players.p2.connected) {
       return cb && cb({ ok: false, error: "Room is full." });
@@ -506,6 +637,15 @@ io.on("connection", (socket) => {
     const code = socket.data.room;
     const room = rooms.get(code);
     if (room) {
+      if (teamGame.isTeamRoom(room)) {
+        const player = teamGame.playerForSocket(room, socket.id);
+        if (player) player.connected = false;
+        socket.leave(code || "");
+        socket.data.room = null;
+        socket.data.teamPlayerId = null;
+        teamGame.sendState(room, io);
+        return;
+      }
       clearAfk(room);
       const role = roleOfSocket(room, socket.id);
       if (role) {
@@ -637,11 +777,58 @@ io.on("connection", (socket) => {
     broadcast(room);
   });
 
+  // ------------------------------------------------------- team rooms
+  socket.on("team_action", ({ event, data } = {}, cb) => {
+    const room = rooms.get(socket.data.room);
+    if (!teamGame.isTeamRoom(room)) return cb && cb({ ok: false, error: "Not a team room." });
+    const playerId = socket.data.teamPlayerId || teamGame.roleOfSocket(room, socket.id);
+    const result = teamGame.handle(room, playerId, event, data);
+    cb && cb(result);
+    if (result.ok && room.phase === "result" && room.result && !room.resultRecorded) {
+      room.resultRecorded = true;
+      for (const player of Object.values(room.players)) {
+        if (!player.userId) continue;
+        const youRuns = room.result.scores[player.teamId];
+        const opponentTeamId = player.teamId === "A" ? "B" : "A";
+        db.recordResult(player.userId, {
+          winner: room.result.winnerTeamId ? (room.result.winnerTeamId === "A" ? "p1" : "p2") : null,
+          youAreP1: player.teamId === "A",
+          youRuns,
+          oppRuns: room.result.scores[opponentTeamId],
+          vsBot: false,
+          opponent: `Team ${opponentTeamId}`,
+          difficulty: null,
+          margin: room.result.margin,
+          marginType: room.result.marginType,
+        });
+      }
+    }
+    if (result.ok) teamGame.sendState(room, io);
+  });
+
+  socket.on("team_invite", ({ userId, teamId = "B" } = {}, cb) => {
+    const room = rooms.get(socket.data.room);
+    const player = room && teamGame.playerForSocket(room, socket.id);
+    if (!teamGame.isTeamRoom(room) || !player || player.playerId !== room.hostPlayerId && player.playerId !== room.teams[player.teamId].captainPlayerId) {
+      return cb && cb({ ok: false, error: "Only a team captain can invite players." });
+    }
+    const result = db.createChallenge({ challengerId: player.userId, challengedId: userId, roomCode: room.code, teamId, settings: { overs: room.overs, wickets: room.wickets, maxTeamSize: room.maxTeamSize } });
+    if (result.ok) io.to(`user:${userId}`).emit("challenge_received", { id: result.id, roomCode: room.code, teamId, from: { id: player.userId, username: player.username, name: player.name } });
+    cb && cb(result);
+  });
+
   // ---------------------------------------------------------- voice (mic)
   // Push-to-talk audio runs peer-to-peer over WebRTC — the server only ever
   // relays handshake payloads (SDP + ICE) between the two players in a room.
   socket.on("voice_signal", ({ data } = {}) => {
     const room = rooms.get(socket.data.room);
+    if (teamGame.isTeamRoom(room)) {
+      const from = teamGame.playerForSocket(room, socket.id);
+      const target = data?.to && room.players[data.to];
+      if (!from || !target || !target.connected) return;
+      io.to(target.socketId).emit("voice_signal", { from: from.playerId, data });
+      return;
+    }
     if (!room || room.vsBot) return;
     const role = roleOfSocket(room, socket.id);
     if (!role) return;
@@ -650,8 +837,16 @@ io.on("connection", (socket) => {
     io.to(peer.id).emit("voice_signal", { from: role, data });
   });
 
-  socket.on("voice_state", ({ talking } = {}) => {
+  socket.on("voice_state", ({ talking, scope } = {}) => {
     const room = rooms.get(socket.data.room);
+    if (teamGame.isTeamRoom(room)) {
+      const from = teamGame.playerForSocket(room, socket.id);
+      if (!from) return;
+      for (const peer of Object.values(room.players)) {
+        if (peer.connected && peer.playerId !== from.playerId) io.to(peer.socketId).emit("voice_state", { from: from.playerId, talking: !!talking, scope: scope === "team" ? "team" : "all" });
+      }
+      return;
+    }
     if (!room || room.vsBot) return;
     const role = roleOfSocket(room, socket.id);
     if (!role) return;
@@ -664,6 +859,14 @@ io.on("connection", (socket) => {
     const code = socket.data.room;
     const room = rooms.get(code);
     if (!room) return;
+    if (teamGame.isTeamRoom(room)) {
+      const player = teamGame.playerForSocket(room, socket.id);
+      if (player) {
+        player.connected = false;
+        teamGame.sendState(room, io);
+      }
+      return;
+    }
     clearAfk(room);
     const role = roleOfSocket(room, socket.id);
     if (!role) return;

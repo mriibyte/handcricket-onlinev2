@@ -13,6 +13,14 @@ new **React frontend** with a minimal, designer-grade UI.
 - **Multiplayer with room codes** — create a room, share the 5-character code,
   your friend joins from anywhere. Full toss (even/odd + secret numbers),
   bat/bowl choice, two innings, target chases.
+- **Team rooms** — signed-in players can create rooms with up to five players
+  per team. Wickets rotate the active batter and every six-ball over rotates
+  the bowler. Team lobbies support ready state, team switching, friend invites,
+  and challenge notifications.
+- **Friends and challenges** — search users, send/accept requests, challenge a
+  friend into a team room, and invite accepted friends from the team lobby.
+- **Team voice** — choose TEAM or ALL voice on the match screen, use persistent
+  mic or push-to-talk, and mute the whole team, opponents, or individual players.
 - **Login / signup backed by SQLite** (`better-sqlite3`, file at `data/arena.db`)
   — scrypt-hashed passwords, server-side session tokens. Guests can play too;
   only signed-in games count toward career stats (played / W / L / T, total
@@ -76,6 +84,7 @@ at `/opt/render/project/src/data`) to keep them.
 node smoke-test.js          # needs the server running on :3000
 node afk-test.js            # silent player still finishes the match via auto-pick
 node rematch-voice-test.js  # rematch consent + mic signaling relay
+node team-test.js           # team lobby and rotation smoke test
 # any of them can target another port: TEST_PORT=3100 node smoke-test.js
 ```
 smoke-test: signup → full bot match over socket.io → stats assertion.

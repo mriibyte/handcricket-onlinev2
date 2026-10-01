@@ -956,6 +956,50 @@ button, input { font-family: inherit; }
 .settings-note { margin-top: 22px; color: var(--faint); font: 10px/1.6 var(--font-mono); }
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 
+/* ---------------------------------------------------- social / team mode */
+.friends-page, .team-lobby, .team-match { width: min(760px, 100%); margin: 0 auto; padding-bottom: 48px; }
+.friends-hero, .team-lobby-hero { padding: 48px 22px 24px; text-align: center; }
+.friends-search, .team-lobby-actions { margin: 0 22px 18px; }
+.social-section { display: flex; flex-direction: column; gap: 8px; margin: 24px 22px 0; }
+.social-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; }
+.social-row > div:first-child { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.social-row b, .team-player-name, .voice-person b { font: 11px/1.5 var(--font-mono); }
+.social-row span, .voice-person small { color: var(--faint); font: 10px/1.5 var(--font-mono); }
+.search-results { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.friends-empty { color: var(--faint); font: 11px/1.7 var(--font-mono); }
+.team-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 22px 18px; }
+.team-column { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(10,10,10,.94); }
+.team-column.is-yours { border-color: var(--accent); }
+.team-column-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 13px; margin-bottom: 10px; }
+.team-column h2 { margin: 4px 0 0; font: 12px/1.6 var(--font-pixel); }
+.team-player-list { display: flex; flex-direction: column; gap: 8px; min-height: 100px; margin-bottom: 12px; }
+.team-player { display: flex; align-items: center; gap: 7px; min-height: 26px; }
+.presence-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--faint); }
+.presence-dot.is-online { background: var(--accent); box-shadow: 0 0 7px rgba(216,255,62,.5); }
+.mini-tag { margin-left: auto; color: var(--faint); font: 8px var(--font-mono); letter-spacing: .08em; }
+.ready-tag { color: var(--accent); }
+.team-empty { color: var(--faint); font: 10px/1.6 var(--font-mono); padding-top: 20px; }
+.team-invite-select { padding: 9px; margin-top: 8px; font-size: 10px; }
+.team-lobby-actions .lobby-hint { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 14px auto; }
+.team-voice-bar { margin: 16px 22px 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.voice-scope { display: flex; flex-direction: column; gap: 7px; }
+.voice-main-button { min-width: 145px; }
+.voice-roster { margin: 10px 22px 0; padding: 15px 16px; }
+.voice-person { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-top: 1px solid var(--line); }
+.voice-person > span:nth-child(2) { display: flex; flex-direction: column; flex: 1; gap: 2px; }
+.voice-person audio { display: none; }
+.team-voice-error { margin: 10px 22px; }
+.team-match .stage { margin-top: 14px; }
+
+@media (max-width: 640px) {
+  .team-columns { grid-template-columns: 1fr; }
+  .team-voice-bar { align-items: stretch; flex-direction: column; }
+  .voice-main-button { width: 100%; }
+  .social-row { align-items: flex-start; flex-direction: column; }
+  .social-row > .row { width: 100%; }
+  .social-row .btn { flex: 1; }
+}
+
 @media (max-width: 640px) {
   .hero { padding-top: 52px; }
   .hero-title { font-size: clamp(22px, 7vw, 42px); }

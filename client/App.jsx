@@ -7,6 +7,9 @@ import MenuPage from "./components/MenuPage.jsx";
 import Lobby from "./components/Lobby.jsx";
 import Match from "./components/Match.jsx";
 import HistoryPage from "./components/HistoryPage.jsx";
+import FriendsPage from "./components/FriendsPage.jsx";
+import TeamLobby from "./components/TeamLobby.jsx";
+import TeamMatch from "./components/TeamMatch.jsx";
 import { Logo } from "./components/Logo.jsx";
 import { playUiSound } from "./sound.js";
 import { useSettings } from "./settings.js";
@@ -14,7 +17,7 @@ import { useSettings } from "./settings.js";
 export default function App() {
   const [user, setUser] = useState(null); // { id, username, name } | { name: 'Guest' }
   const [stats, setStats] = useState(null);
-  const [view, setView] = useState("auth"); // auth | home | menu | lobby | match | history
+  const [view, setView] = useState("auth"); // auth | home | menu | lobby | match | history | friends | teamLobby | teamMatch
   const [roomCode, setRoomCode] = useState(null);
   const [matchState, setMatchState] = useState(null);
   const [booted, setBooted] = useState(false);
@@ -67,7 +70,10 @@ export default function App() {
   useEffect(() => {
     const onState = (s) => {
       setMatchState(s);
-      if (!s.opponent) {
+      if (s.mode === "team") {
+        setRoomCode(s.code);
+        setView(s.phase === "lobby" ? "teamLobby" : "teamMatch");
+      } else if (!s.opponent) {
         setRoomCode(s.code);
         setView("lobby");
       } else {
@@ -102,6 +108,13 @@ export default function App() {
     setStats(null);
     setView("auth");
   }, []);
+
+  const createTeamRoom = useCallback((friend) => {
+    socket.emit("create_room", {
+      mode: "team", name: user?.name, overs: 2, wickets: 5, maxTeamSize: 5,
+      invitedUserIds: friend ? [friend.id] : [], token: getToken(),
+    }, (result) => { if (!result?.ok) window.alert(result?.error || "Could not create team room."); });
+  }, [user?.name]);
 
   if (!booted) {
     return (
@@ -138,6 +151,7 @@ export default function App() {
         onSignOut={signOut}
         onSignIn={() => setView("auth")}
         onHistory={() => setView("history")}
+        onFriends={() => setView("friends")}
       />
     );
   }
@@ -154,8 +168,20 @@ export default function App() {
     return <HistoryPage onBack={() => setView("home")} signedIn={!!user?.id} onSignIn={() => setView("auth")} />;
   }
 
+  if (view === "friends") {
+    return <FriendsPage userId={user?.id} socket={socket} onBack={() => setView("home")} onChallenge={createTeamRoom} onJoinChallenge={(data, challenge) => socket.emit("join_room", { code: data.roomCode, teamId: data.teamId, token: getToken() })} />;
+  }
+
   if (view === "match") {
     return <Match state={matchState} onLeave={leave} onStatsRefresh={refreshStats} socket={socket} user={user} />;
+  }
+
+  if (view === "teamLobby") {
+    return <TeamLobby state={matchState} socket={socket} onLeave={leave} />;
+  }
+
+  if (view === "teamMatch") {
+    return <TeamMatch state={matchState} socket={socket} onLeave={leave} onStatsRefresh={refreshStats} />;
   }
 
   return null;

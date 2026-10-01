@@ -5,7 +5,11 @@ export const DEFAULT_SETTINGS = {
   sounds: true,
   voiceEnabled: true,
   voiceMode: "push-to-talk",
+  defaultVoiceScope: "all",
   muteOpponent: false,
+  muteAll: false,
+  muteTeam: false,
+  mutedPeers: {},
   reducedMotion: false,
 };
 

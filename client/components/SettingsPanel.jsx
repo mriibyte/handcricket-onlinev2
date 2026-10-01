@@ -26,6 +26,15 @@ export default function SettingsPanel({ onClose }) {
           <div className="settings-label">VOICE CHAT</div>
           <SettingToggle label="Voice chat" detail="Enable multiplayer voice" value={settings.voiceEnabled} onChange={(value) => updateSettings({ voiceEnabled: value })} />
           <SettingToggle label="Mute opponent" detail="You can still speak; their audio stays silent" value={settings.muteOpponent} onChange={(value) => updateSettings({ muteOpponent: value })} />
+          <SettingToggle label="Mute all voice" detail="Silence every teammate and opponent" value={settings.muteAll} onChange={(value) => updateSettings({ muteAll: value })} />
+          <SettingToggle label="Mute team voice" detail="Silence your teammates" value={settings.muteTeam} onChange={(value) => updateSettings({ muteTeam: value })} />
+          <div className="settings-row settings-mode-row">
+            <div><b>Default mic scope</b><span>Used when a team match starts</span></div>
+            <div className="settings-segmented">
+              <button className={settings.defaultVoiceScope === "team" ? "is-on" : ""} onClick={() => updateSettings({ defaultVoiceScope: "team" })}>TEAM</button>
+              <button className={settings.defaultVoiceScope === "all" ? "is-on" : ""} onClick={() => updateSettings({ defaultVoiceScope: "all" })}>ALL</button>
+            </div>
+          </div>
           <div className="settings-row settings-mode-row">
             <div><b>Mic mode</b><span>How your microphone activates</span></div>
             <div className="settings-segmented">

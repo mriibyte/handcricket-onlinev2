@@ -12,7 +12,7 @@ function Stat({ big, small }) {
   );
 }
 
-export default function HomePage({ user, stats, onEnter, onSignOut, onSignIn, onHistory }) {
+export default function HomePage({ user, stats, onEnter, onSignOut, onSignIn, onHistory, onFriends }) {
   const signedIn = !!user?.id;
   const [showSettings, setShowSettings] = useState(false);
   return (
@@ -53,6 +53,11 @@ export default function HomePage({ user, stats, onEnter, onSignOut, onSignIn, on
           {signedIn && (
             <button className="btn btn-ghost btn-lg" onClick={onHistory}>
               Match history
+            </button>
+          )}
+          {signedIn && (
+            <button className="btn btn-ghost btn-lg" onClick={onFriends}>
+              Friends
             </button>
           )}
         </div>
